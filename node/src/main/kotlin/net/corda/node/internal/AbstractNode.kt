@@ -189,7 +189,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return initialiseDatabasePersistence(schemaService,  makeIdentityService(identity.certificate)) { database ->
             // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks like
             // a code smell.
-            val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
+            val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList(), name = configuration.myLegalName)
             val (keyPairs, info) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
             val signedNodeInfo = signNodeInfo(info) { publicKey, serialised ->
                 val privateKey = keyPairs.single { it.public == publicKey }.private
@@ -211,7 +211,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         retrieveNetworkParameters(identityService.trustRoot)
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
-            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
+            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries, configuration.myLegalName), identityService)
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database)

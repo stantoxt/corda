@@ -253,9 +253,7 @@ data class RPCDriverDSL(
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(inVmClientTransportConfiguration, configuration)
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
-            driverDSL.shutdownManager.registerShutdown {
-                connection.close()
-            }
+            driverDSL.shutdownManager.registerShutdown("RPC ($username/$password)", connection::close)
             connection.proxy
         }
     }
@@ -273,7 +271,7 @@ data class RPCDriverDSL(
         val locator = ActiveMQClient.createServerLocatorWithoutHA(inVmClientTransportConfiguration)
         val sessionFactory = locator.createSessionFactory()
         val session = sessionFactory.createSession(username, password, false, true, true, locator.isPreAcknowledge, DEFAULT_ACK_BATCH_SIZE)
-        driverDSL.shutdownManager.registerShutdown {
+        driverDSL.shutdownManager.registerShutdown("RPC ($username/$password)") {
             session.close()
             sessionFactory.close()
             locator.close()
@@ -324,9 +322,7 @@ data class RPCDriverDSL(
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), rpcAddress, null), configuration)
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
-            driverDSL.shutdownManager.registerShutdown {
-                connection.close()
-            }
+            driverDSL.shutdownManager.registerShutdown("RPC to $rpcAddress", connection::close)
             connection.proxy
         }
     }
@@ -346,7 +342,7 @@ data class RPCDriverDSL(
             password: String = rpcTestUser.password
     ): CordaFuture<Process> {
         val process = ProcessUtilities.startJavaProcess<RandomRpcUser>(listOf(rpcOpsClass.name, rpcAddress.toString(), username, password))
-        driverDSL.shutdownManager.registerProcessShutdown(process)
+        driverDSL.shutdownManager.registerProcessShutdown("RPC to $rpcAddress", process)
         return doneFuture(process)
     }
 
@@ -365,7 +361,7 @@ data class RPCDriverDSL(
         val locator = ActiveMQClient.createServerLocatorWithoutHA(createNettyClientTransportConfiguration(rpcAddress))
         val sessionFactory = locator.createSessionFactory()
         val session = sessionFactory.createSession(username, password, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
-        driverDSL.shutdownManager.registerShutdown {
+        driverDSL.shutdownManager.registerShutdown("RPC to $rpcAddress") {
             session.close()
             sessionFactory.close()
             locator.close()
@@ -387,7 +383,7 @@ data class RPCDriverDSL(
             val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)
             val server = ActiveMQServerImpl(artemisConfig, SingleUserSecurityManager(rpcUser))
             server.start()
-            driverDSL.shutdownManager.registerShutdown {
+            driverDSL.shutdownManager.registerShutdown("RPC ($serverName)") {
                 server.stop()
                 addressMustNotBeBound(driverDSL.executorService, hostAndPort)
             }
@@ -410,7 +406,7 @@ data class RPCDriverDSL(
             server.setConfiguration(artemisConfig)
             server.setSecurityManager(SingleUserSecurityManager(rpcUser))
             server.start()
-            driverDSL.shutdownManager.registerShutdown {
+            driverDSL.shutdownManager.registerShutdown("RPC ($rpcUser)") {
                 server.activeMQServer.stop()
                 server.stop()
             }
@@ -443,7 +439,7 @@ data class RPCDriverDSL(
                 nodeLegalName,
                 configuration
         )
-        driverDSL.shutdownManager.registerShutdown {
+        driverDSL.shutdownManager.registerShutdown("RPC to ${nodeLegalName.organisation}") {
             rpcServer.close()
             locator.close()
         }

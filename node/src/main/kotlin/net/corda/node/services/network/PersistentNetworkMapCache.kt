@@ -74,7 +74,8 @@ class NetworkMapCacheImpl(
 @ThreadSafe
 open class PersistentNetworkMapCache(
         private val database: CordaPersistence,
-        notaries: List<NotaryInfo>
+        notaries: List<NotaryInfo>,
+        private val name: CordaX500Name
 ) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
     companion object {
         private val logger = contextLogger()
@@ -131,6 +132,8 @@ open class PersistentNetworkMapCache(
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = database.transaction { queryByIdentityKey(session, party.owningKey) }
+        println("<$name> getPartyInfo($party) = $nodes")
+        println("<$name> allNodes: $allNodes")
         if (nodes.size == 1 && nodes[0].isLegalIdentity(party)) {
             return PartyInfo.SingleNode(party, nodes[0].addresses)
         }
@@ -187,6 +190,7 @@ open class PersistentNetworkMapCache(
         }
         _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
         _registrationFuture.set(null)
+        Exception("<$name> addNode: $node").printStackTrace(System.out)
         logger.info("Done adding node with info: $node")
     }
 
